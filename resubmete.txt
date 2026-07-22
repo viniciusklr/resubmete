@@ -1,0 +1,177 @@
+function getCampanhasAtivas() {
+  const tabela = document.querySelectorAll("table")[4];
+
+  return [...tabela.querySelectorAll("tr")]
+    .map(tr =>
+      [...tr.querySelectorAll("td")].map(td =>
+        td.innerText.replace(/\s+/g, " ").trim()
+      )
+    )
+    .filter(l => l.length);
+}
+
+function campanhasParaResubmeter() {
+  const rows = getCampanhasAtivas();
+
+  return rows
+    .map(row => {
+      const campaignId = row[0]?.replace(/\D/g, "");
+      const campaignName = row[1];
+      const mailing = row[8];
+      const valor = parseInt(row[10], 10);
+
+      if (!campaignId || !mailing || isNaN(valor)) return null;
+
+      return {
+        campaignId,
+        campaignName,
+        mailing,
+        valor
+      };
+    })
+    .filter(item => item && item.valor < 100);
+}
+
+const dispositions = [
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 279,
+    DispositionName: "ATENDE E DESLIGA",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 3,
+    DispositionName: "Aut - Anunciadora",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 12,
+    DispositionName: "Aut - Congestionamento Externo",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 11,
+    DispositionName: "Aut - Congestionamento Interno",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 4,
+    DispositionName: "Aut - Hang Up",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 5,
+    DispositionName: "Aut - Impossível completar",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 8,
+    DispositionName: "Aut - Mensagem de Operadora",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 2,
+    DispositionName: "Aut - Não Atende",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 1,
+    DispositionName: "Aut - Ocupado",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 21,
+    DispositionName: "Aut - Silêncio",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 109,
+    DispositionName: "MENSAGEM DE OPERADORA",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 110,
+    DispositionName: "NAO LOCALIZADO",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 117,
+    DispositionName: "RECADO CAIXA POSTAL",
+    Selected: true,
+  },
+  {
+    __type: "WebMonitor.FastBuildDisposition",
+    DispositionId: 125,
+    DispositionName: "TELEFONE OCUPADO",
+    Selected: true,
+  },
+];
+
+async function executarResubmissao(campanha) {
+  try {
+    console.log(
+      `Enviando campanha ${campanha.campaignId} - ${campanha.campaignName}`
+    );
+
+    const response = await fetch(
+      "http://172.16.10.4/WebMonitor/Default.aspx/ExecuteFastBuild",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({
+          data: {
+            Mailing: campanha.mailing,
+            CampaignId: campanha.campaignId,
+            UserId: "15971",
+            CampaignName: campanha.campaignName,
+            Dispositions: dispositions,
+            resetCustomerAttempts: true,
+            resetPhoneNumberAttempts: true,
+          },
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    console.log(
+      `API enviada para campanha ${campanha.campaignId}:`,
+      result
+    );
+
+  } catch (err) {
+    console.error(
+      `Erro ao chamar API da campanha ${campanha.campaignId}:`,
+      err
+    );
+  }
+}
+
+async function monitorarCampanhas() {
+  console.log("Verificando campanhas...");
+
+  const campanhas = campanhasParaResubmeter();
+
+  console.log("Campanhas abaixo de 100:", campanhas);
+
+  for (const campanha of campanhas) {
+    await executarResubmissao(campanha);
+  }
+}
+
+monitorarCampanhas();
+setInterval(monitorarCampanhas, 30000);
