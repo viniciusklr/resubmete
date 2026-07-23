@@ -12,13 +12,22 @@ function getCampanhasAtivas() {
 
 function campanhasParaResubmeter() {
   const rows = getCampanhasAtivas();
+  let lastCampaignId = null;
+  let lastCampaignName = null;
 
   return rows
     .map(row => {
-      const campaignId = row[0]?.replace(/\D/g, "");
-      const campaignName = row[1];
-      const mailing = row[8];
-      const valor = parseInt(row[10], 10);
+      const isFull = row.length >= 18;
+
+      if (isFull) {
+        lastCampaignId = row[0]?.replace(/\D/g, "");
+        lastCampaignName = row[1];
+      }
+
+      const campaignId = lastCampaignId;
+      const campaignName = lastCampaignName;
+      const mailing = isFull ? row[8] : row[0];
+      const valor = parseInt(isFull ? row[10] : row[2], 10);
 
       if (!campaignId || !mailing || isNaN(valor)) return null;
 
