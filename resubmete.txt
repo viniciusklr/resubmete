@@ -38,7 +38,7 @@ function campanhasParaResubmeter() {
         valor
       };
     })
-    .filter(item => item && item.valor < 100);
+    .filter(item => item && item.valor < 600);
 }
 
 const dispositions = [
